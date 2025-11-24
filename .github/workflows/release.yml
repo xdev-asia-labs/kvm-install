@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run all tests
+        run: |
+          echo "=== Running pre-release tests ==="
+
+          # Syntax check
+          bash -n kvm-install.sh
+
+          # Structure check
+          chmod +x test-kvm-install.sh
+          ./test-kvm-install.sh
+
+          echo "✅ Pre-release tests passed"
+
+      - name: Create release archive
+        run: |
+          echo "=== Creating release archive ==="
+
+          mkdir -p release
+          cp kvm-install.sh release/
+          cp README.md release/
+          cp DOCKER-TESTING.md release/
+          cp docker-test.sh release/
+          cp Dockerfile.test release/
+          cp docker-compose.test.yml release/
+
+          cd release
+          tar -czf ../kvm-install-${{ github.ref_name }}.tar.gz *
+          cd ..
+
+          echo "✅ Release archive created"
+
+      - name: Generate checksums
+        run: |
+          sha256sum kvm-install-${{ github.ref_name }}.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            kvm-install-${{ github.ref_name }}.tar.gz
+            checksums.txt
+          body: |
+            ## KVM Installation Script Release ${{ github.ref_name }}
+
+            ### What's Included
+            - `kvm-install.sh` - Main installation script
+            - `docker-test.sh` - Docker testing script
+            - `test-kvm-install.sh` - Local test script
+            - Documentation files
+
+            ### Installation
+            ```bash
+            wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/kvm-install-${{ github.ref_name }}.tar.gz
+            tar -xzf kvm-install-${{ github.ref_name }}.tar.gz
+            cd release
+            sudo bash kvm-install.sh
+            ```
+
+            ### Testing
+            ```bash
+            # Syntax check
+            bash -n kvm-install.sh
+
+            # Full test suite
+            ./test-kvm-install.sh
+
+            # Docker test
+            ./docker-test.sh
+            ```
+
+            ### Requirements
+            - Ubuntu 24.04 or later
+            - CPU with VT-x/AMD-V support
+            - Root/sudo access
+
+            ### Checksums
+            See `checksums.txt` for SHA256 checksums
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

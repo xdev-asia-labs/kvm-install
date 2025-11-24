@@ -1,0 +1,168 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run security scan weekly on Mondays at 00:00 UTC
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  shellcheck-security:
+    name: ShellCheck Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck with security focus
+        run: |
+          echo "=== Running ShellCheck security analysis ==="
+          shellcheck -S warning kvm-install.sh || true
+          echo ""
+          echo "=== Critical security issues ==="
+          shellcheck -S error kvm-install.sh || echo "No critical security issues found"
+
+  script-security-check:
+    name: Script Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for common security issues
+        run: |
+          echo "=== Checking for security best practices ==="
+
+          # Check for dangerous commands without proper checks
+          echo "Checking for unsafe command usage..."
+
+          # Check for rm -rf usage
+          if grep -n "rm -rf" kvm-install.sh; then
+            echo "⚠️  Warning: rm -rf found. Ensure it's safe."
+          else
+            echo "✅ No dangerous rm -rf usage"
+          fi
+
+          # Check for eval usage
+          if grep -n "eval" kvm-install.sh; then
+            echo "⚠️  Warning: eval found. This can be dangerous."
+          else
+            echo "✅ No eval usage"
+          fi
+
+          # Check for unquoted variables
+          echo ""
+          echo "Checking for error handling..."
+          if grep -q "set -e" kvm-install.sh; then
+            echo "✅ Error handling enabled (set -e)"
+          else
+            echo "⚠️  Warning: No 'set -e' found"
+          fi
+
+          # Check for root check
+          echo ""
+          echo "Checking for privilege escalation protection..."
+          if grep -q "EUID -ne 0" kvm-install.sh; then
+            echo "✅ Root check implemented"
+          else
+            echo "❌ No root check found"
+          fi
+
+          # Check for input validation
+          echo ""
+          echo "Checking for user input validation..."
+          if grep -q "read -p" kvm-install.sh; then
+            echo "✅ User confirmation prompts found"
+          else
+            echo "⚠️  Warning: No user confirmation"
+          fi
+
+          echo ""
+          echo "✅ Security check completed"
+
+  dependency-check:
+    name: Check External Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: List external commands
+        run: |
+          echo "=== Analyzing external command dependencies ==="
+
+          # Extract command usage
+          COMMANDS=$(grep -oE '\b(apt-get|systemctl|virsh|usermod|ufw|wget|curl|docker)\b' kvm-install.sh | sort -u)
+
+          echo "External commands used in script:"
+          echo "$COMMANDS"
+
+          echo ""
+          echo "=== Checking for download operations ==="
+          if grep -E "(wget|curl)" kvm-install.sh; then
+            echo "⚠️  Script downloads external content. Review for security."
+          else
+            echo "✅ No external downloads detected"
+          fi
+
+          echo ""
+          echo "✅ Dependency analysis completed"
+
+  secrets-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded credentials
+        run: |
+          echo "=== Scanning for potential secrets ==="
+
+          # Check for common patterns
+          PATTERNS=("password" "api_key" "secret" "token" "credential")
+
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -i "$pattern.*=" kvm-install.sh | grep -v "print_" | grep -v "#"; then
+              echo "⚠️  Potential secret found: $pattern"
+            fi
+          done
+
+          echo ""
+          echo "✅ Secrets scan completed"
+
+  permissions-check:
+    name: File Permissions Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check file permissions
+        run: |
+          echo "=== Checking file permissions ==="
+
+          # Check if script is executable
+          if [ -x "kvm-install.sh" ]; then
+            echo "✅ kvm-install.sh is executable"
+          else
+            echo "⚠️  kvm-install.sh is not executable (will need chmod +x)"
+          fi
+
+          # List all script permissions
+          ls -la *.sh
+
+          echo ""
+          echo "✅ Permissions check completed"

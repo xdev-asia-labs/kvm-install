@@ -1,0 +1,56 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.md"
+      - "DOCKER-TESTING.md"
+  workflow_dispatch:
+
+jobs:
+  check-docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify documentation files
+        run: |
+          echo "=== Checking documentation files ==="
+
+          FILES=("README.md" "DOCKER-TESTING.md")
+
+          for file in "${FILES[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ $file exists"
+              wc -l "$file"
+            else
+              echo "❌ $file not found"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "✅ All documentation files present"
+
+      - name: Check for broken links
+        run: |
+          echo "=== Checking for common issues ==="
+
+          # Check if scripts referenced in docs exist
+          if grep -q "kvm-install.sh" README.md; then
+            if [ -f "kvm-install.sh" ]; then
+              echo "✅ kvm-install.sh referenced and exists"
+            fi
+          fi
+
+          if grep -q "docker-test.sh" DOCKER-TESTING.md; then
+            if [ -f "docker-test.sh" ]; then
+              echo "✅ docker-test.sh referenced and exists"
+            fi
+          fi
+
+          echo "✅ Documentation check completed"
