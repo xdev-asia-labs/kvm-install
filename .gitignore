@@ -1,0 +1,6 @@
+# Add GitHub Actions badge to README
+*.github/workflows/
+
+# Ignore workflow artifacts
+*.log
+test-results/

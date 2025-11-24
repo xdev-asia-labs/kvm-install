@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  kvm-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: kvm-install-test
+    privileged: true
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./kvm-install.sh:/opt/kvm-install/kvm-install.sh:ro
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: /bin/bash
+
+  # Service for automated testing
+  kvm-test-auto:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: kvm-install-test-auto
+    privileged: true
+    volumes:
+      - ./kvm-install.sh:/opt/kvm-install/kvm-install.sh:ro
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: |
+      bash -c "
+        echo '=== Running Automated Tests ==='
+        echo ''
+        echo '[1/4] Syntax check...'
+        bash -n /opt/kvm-install/kvm-install.sh && echo '✓ Syntax OK' || echo '✗ Syntax Error'
+        echo ''
+        echo '[2/4] Checking script structure...'
+        grep -q 'check_root' /opt/kvm-install/kvm-install.sh && echo '✓ check_root found'
+        grep -q 'install_kvm' /opt/kvm-install/kvm-install.sh && echo '✓ install_kvm found'
+        grep -q 'install_cockpit' /opt/kvm-install/kvm-install.sh && echo '✓ install_cockpit found'
+        echo ''
+        echo '[3/4] Checking OS compatibility...'
+        cat /etc/os-release | grep -i ubuntu && echo '✓ Running on Ubuntu'
+        echo ''
+        echo '[4/4] Checking required commands...'
+        which apt-get && echo '✓ apt-get available'
+        which systemctl && echo '✓ systemctl available'
+        echo ''
+        echo '=== Tests Completed ==='
+      "
