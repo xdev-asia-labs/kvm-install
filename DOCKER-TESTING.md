@@ -18,6 +18,7 @@ chmod +x docker-test.sh
 ```
 
 You'll see a menu with options:
+
 1. **Syntax check only** - Quick validation
 2. **Dry-run mode** - Shows what would be installed
 3. **Interactive shell** - Manual testing
@@ -25,36 +26,42 @@ You'll see a menu with options:
 
 ### Method 2: Using Docker Compose
 
-#### Run automated tests:
+#### Run automated tests
+
 ```bash
 docker-compose -f docker-compose.test.yml run --rm kvm-test-auto
 ```
 
-#### Interactive testing:
+#### Interactive testing
+
 ```bash
 docker-compose -f docker-compose.test.yml run --rm kvm-test
 ```
 
 ### Method 3: Manual Docker commands
 
-#### Build the test image:
+#### Build the test image
+
 ```bash
 docker build -f Dockerfile.test -t kvm-install-test .
 ```
 
-#### Run syntax check:
+#### Run syntax check
+
 ```bash
 docker run --rm kvm-install-test bash -n /opt/kvm-install/kvm-install.sh
 ```
 
-#### Interactive shell:
+#### Interactive shell
+
 ```bash
 docker run --rm -it kvm-install-test bash
 # Inside container:
 sudo bash /opt/kvm-install/kvm-install.sh
 ```
 
-#### Dry-run mode:
+#### Dry-run mode
+
 ```bash
 docker run --rm -it kvm-install-test bash -c "
   sed 's/apt-get/echo \"DRY-RUN: apt-get\"/g' /opt/kvm-install/kvm-install.sh | bash
@@ -64,24 +71,28 @@ docker run --rm -it kvm-install-test bash -c "
 ## Test Modes Explained
 
 ### 1. Syntax Check
+
 - Validates bash syntax
 - Fast (< 1 second)
 - No installation required
 - Safe to run anywhere
 
 ### 2. Dry-Run Mode
+
 - Shows what commands would be executed
 - Doesn't actually install packages
 - Good for understanding script flow
 - Safe to run
 
 ### 3. Interactive Shell
+
 - Manual testing environment
 - Full control over execution
 - Can step through script
 - Best for debugging
 
 ### 4. Full Installation Test
+
 - Actually installs KVM packages
 - **Warning:** Requires nested virtualization
 - May not work on macOS Docker (no KVM support)
@@ -90,17 +101,20 @@ docker run --rm -it kvm-install-test bash -c "
 ## Limitations on macOS
 
 Docker on macOS doesn't support KVM (kernel-based virtualization) because:
+
 - Docker Desktop on Mac uses a Linux VM
 - That VM doesn't expose VT-x/AMD-V to containers
 - KVM requires hardware virtualization support
 
 **What you CAN test on macOS:**
+
 - ✅ Script syntax
 - ✅ Script logic and flow
 - ✅ Package installation commands (dry-run)
 - ✅ Error handling
 
 **What you CANNOT test on macOS:**
+
 - ❌ Actual KVM functionality
 - ❌ VM creation with libvirt
 - ❌ Hardware virtualization features
@@ -108,6 +122,7 @@ Docker on macOS doesn't support KVM (kernel-based virtualization) because:
 ## Testing on Real Ubuntu
 
 For full testing, use:
+
 1. **Ubuntu VM** (Parallels, UTM, VirtualBox)
 2. **Cloud instance** (AWS, DigitalOcean, etc.)
 3. **Linux machine** with Docker
@@ -115,11 +130,13 @@ For full testing, use:
 ## Clean Up
 
 Remove test image:
+
 ```bash
 docker rmi kvm-install-test:latest
 ```
 
 Remove all test containers:
+
 ```bash
 docker-compose -f docker-compose.test.yml down
 ```
@@ -156,16 +173,19 @@ Syntax OK
 ## Troubleshooting
 
 ### Docker not found
+
 ```bash
 # Install Docker Desktop for Mac
 brew install --cask docker
 ```
 
 ### Docker not running
+
 - Start Docker Desktop from Applications
 - Wait for Docker icon in menu bar to show "Docker Desktop is running"
 
 ### Build fails
+
 ```bash
 # Clear Docker cache and rebuild
 docker system prune -a
@@ -173,6 +193,7 @@ docker build --no-cache -f Dockerfile.test -t kvm-install-test .
 ```
 
 ### Permission denied
+
 ```bash
 # Make scripts executable
 chmod +x docker-test.sh kvm-install.sh
